@@ -18,11 +18,13 @@ Functions should be the primary way to organize code logic. This makes code:
 - Simpler to reason about and review
 
 Only use classes when:
+
 - Defining types (Enums, Pydantic models, dataclasses)
 - Required by a specific library/framework
 - Implementing design patterns that require state management
 
 **What this accomplishes:**
+
 - Promotes functional programming principles
 - Improves code testability and maintainability
 - Reduces complexity and cognitive load
@@ -56,7 +58,7 @@ class ProcessingConfig(BaseModel):
     max_retries: int = Field(3, ge=0, le=10, description="Maximum number of retry attempts")
     timeout_seconds: float = Field(30.0, gt=0, le=300, description="Operation timeout in seconds")
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     @validator('batch_size')
     def validate_batch_size(cls, v):
         if v > 1000:
@@ -94,16 +96,17 @@ def process_data(
         ValidationError: If input data is invalid
     """
     results: dict[str, int | float] = {}
-    
+
     for item in data:
         if callback:
             callback(f"Processing {item}")
         # ... implementation
-    
+
     return results
 ```
 
 **What this accomplishes:**
+
 - Provides compile-time type checking and IDE support
 - Documents function signatures and expected types
 - Catches type-related bugs early in development
@@ -120,7 +123,7 @@ from your_package.types import ProcessingConfig, DataSource
 
 class TestProcessData:
     """Test suite for process_data function."""
-    
+
     def test_process_data_handles_empty_input(self):
         """Should return empty dict for empty input."""
         # Arrange
@@ -146,14 +149,14 @@ class TestProcessData:
 
         # Assert
         assert result == {"a": 2, "b": 1}
-    
+
     @patch('your_package.core.external_service')
     def test_process_data_handles_external_failure(self, mock_service):
         """Should handle external service failures gracefully."""
         # Arrange
         mock_service.side_effect = ConnectionError("Service unavailable")
         config = ProcessingConfig(max_retries=1)
-        
+
         # Act & Assert
         with pytest.raises(ProcessingError):
             process_data(["test"], config, DataSource.API_ENDPOINT)
@@ -166,6 +169,7 @@ class TestProcessData:
 - **End-to-end tests for user workflows**
 
 **What this accomplishes:**
+
 - Ensures code reliability through comprehensive testing
 - Catches regressions early in development cycle
 - Provides confidence for refactoring and changes
@@ -178,7 +182,7 @@ class TestProcessData:
 ```python
 class ProcessingError(Exception):
     """Raised when data processing fails."""
-    
+
     def __init__(self, message: str, error_code: str, context: dict | None = None):
         super().__init__(message)
         self.error_code = error_code
@@ -201,7 +205,7 @@ from typing import Any
 
 class JSONFormatter(logging.Formatter):
     """JSON formatter for structured logging."""
-    
+
     def format(self, record):
         log_entry = {
             "timestamp": datetime.utcnow().isoformat(),
@@ -212,15 +216,15 @@ class JSONFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno,
         }
-        
+
         # Add extra fields if present
         if hasattr(record, 'extra_fields'):
             log_entry.update(record.extra_fields)
-        
+
         # Add exception info if present
         if record.exc_info:
             log_entry["exception"] = self.formatException(record.exc_info)
-        
+
         return json.dumps(log_entry)
 
 
@@ -228,11 +232,11 @@ def setup_logging(level: str = "INFO") -> None:
     """Setup JSON logging configuration."""
     logger = logging.getLogger()
     logger.setLevel(getattr(logging, level.upper()))
-    
+
     # Remove existing handlers
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
-    
+
     # Add console handler with JSON formatter
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(JSONFormatter())
@@ -248,7 +252,7 @@ def process_with_logging(data: list[str]) -> dict[str, Any]:
     """Example of proper logging in functions."""
     logger = get_logger(__name__)
     logger.info("Starting data processing", extra={"extra_fields": {"count": len(data)}})
-    
+
     try:
         # Process data
         result = process_data(data)
@@ -269,6 +273,7 @@ def process_with_logging(data: list[str]) -> dict[str, Any]:
 ```
 
 **What this accomplishes:**
+
 - Provides structured, machine-readable logs for monitoring and debugging
 - Ensures consistent log format across the application
 - Enables easy log aggregation and analysis
@@ -294,23 +299,23 @@ class DatabaseConfig(BaseModel):
 
 class AppConfig(BaseSettings):
     """Application configuration loaded from environment."""
-    
+
     # Application settings
     app_name: str = Field("MyApp", description="Application name")
     debug: bool = Field(False, description="Debug mode")
     log_level: str = Field("INFO", description="Logging level")
-    
+
     # External services
     api_key: str = Field(..., description="API key for external service")
     api_endpoint: str = Field(..., description="External API endpoint")
-    
+
     # Database
     database: DatabaseConfig
-    
+
     # Performance
     worker_count: int = Field(4, gt=0, description="Number of worker processes")
     max_connections: int = Field(100, gt=0, description="Maximum database connections")
-    
+
     class Config:
         env_file = ".env"
         env_nested_delimiter = "__"
@@ -327,6 +332,7 @@ class AppConfig(BaseSettings):
 ```
 
 **What this accomplishes:**
+
 - Centralizes configuration management with type safety
 - Validates configuration at startup to catch errors early
 - Supports environment-based deployment configurations
@@ -348,12 +354,12 @@ async def fetch_data_batch(
     semaphore: asyncio.Semaphore
 ) -> list[dict]:
     """Fetch data from multiple URLs concurrently with rate limiting."""
-    
+
     async def fetch_single(url: str) -> dict:
         async with semaphore:  # Rate limiting
             async with session.get(url) as response:
                 return await response.json()
-    
+
     tasks = [fetch_single(url) for url in urls]
     return await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -383,7 +389,7 @@ def transform_data(
     filter_date: date | None = None
 ) -> pl.LazyFrame:
     """Transform data using Polars lazy evaluation."""
-    
+
     query = (
         pl.scan_parquet(input_path)
         .with_columns([
@@ -391,10 +397,10 @@ def transform_data(
             pl.col("amount").cast(pl.Float64),
         ])
     )
-    
+
     if filter_date:
         query = query.filter(pl.col("timestamp").dt.date() >= filter_date)
-    
+
     result = (
         query
         .group_by("category")
@@ -405,13 +411,18 @@ def transform_data(
         ])
         .sort("total_amount", descending=True)
     )
-    
+
     # Execute and save
     result.sink_parquet(output_path)
     return result
 ```
 
 ### Use Altair for plotting
+
+- Default to Altair for all static and interactive plotting
+- Use the Polars package directly (**do not use .to_pandas()**)
+- Make good titles, give descriptive names to axis
+- Put plots together when it makes sense
 
 ```python
 # Example Altair plot
@@ -426,6 +437,7 @@ chart.save("example_plot.png")
 ```
 
 **What this accomplishes:**
+
 - Enables high-performance concurrent operations
 - Optimizes memory usage through streaming and lazy evaluation
 - Provides scalable data processing capabilities
@@ -466,10 +478,10 @@ logger = logging.getLogger(__name__)
 # Dependency Injection
 class DatabaseService:
     """Database service for dependency injection."""
-    
+
     def __init__(self, connection_string: str):
         self.connection_string = connection_string
-    
+
     async def get_data(self, id: str) -> dict:
         """Get data from database."""
         # Implementation here
@@ -478,11 +490,11 @@ class DatabaseService:
 
 class ExternalAPIService:
     """External API service for dependency injection."""
-    
+
     def __init__(self, api_key: str, base_url: str):
         self.api_key = api_key
         self.base_url = base_url
-    
+
     async def call_external_api(self, endpoint: str) -> dict:
         """Call external API."""
         # Implementation here
@@ -528,10 +540,10 @@ async def process_data_endpoint(
     api_service: Annotated[ExternalAPIService, Depends(get_external_api_service)]
 ) -> ProcessResponse:
     """Process data with proper error handling and logging."""
-    
+
     start_time = time.time()
     request_id = str(uuid.uuid4())
-    
+
     logger.info(
         "Processing request started",
         extra={"extra_fields": {
@@ -539,20 +551,20 @@ async def process_data_endpoint(
             "data_count": len(request.data)
         }}
     )
-    
+
     try:
         # Validate authentication
         validate_token(token.credentials)
-        
+
         # Use injected services
         db_data = await db_service.get_data("example_id")
         api_result = await api_service.call_external_api("/process")
-        
+
         # Process data
         results = await process_data_async(request.data, request.config)
-        
+
         processing_time = time.time() - start_time
-        
+
         logger.info(
             "Processing completed successfully",
             extra={"extra_fields": {
@@ -560,13 +572,13 @@ async def process_data_endpoint(
                 "processing_time": processing_time
             }}
         )
-        
+
         return ProcessResponse(
             results=results,
             processing_time=processing_time,
             status="success"
         )
-        
+
     except ValidationError as e:
         logger.warning("Validation error", extra={"extra_fields": {"request_id": request_id, "error": str(e)}})
         raise HTTPException(
@@ -582,6 +594,7 @@ async def process_data_endpoint(
 ```
 
 **What this accomplishes:**
+
 - Provides clean separation of concerns through dependency injection
 - Enables easy testing and mocking of dependencies
 - Improves code maintainability and testability
@@ -653,29 +666,29 @@ def process(
     )],
 ) -> None:
     """Process data from input file to output file."""
-    
+
     if verbose:
         console.print(f"Processing {input_file} -> {output_file}")
-    
+
     try:
         config = ProcessingConfig(
             batch_size=batch_size,
             max_retries=max_retries
         )
-        
+
         if config_file:
             config = ProcessingConfig.parse_file(config_file)
-        
+
         with Progress() as progress:
             task = progress.add_task("Processing...", total=100)
-            
+
             # Process with progress updates
             result = process_file_with_progress(
                 input_file, output_file, config, progress, task
             )
-        
+
         console.print(f"✅ Processing completed: {len(result)} items processed")
-        
+
     except Exception as e:
         console.print(f"❌ Error: {e}", style="red")
         raise typer.Exit(1)
@@ -686,6 +699,7 @@ if __name__ == "__main__":
 ```
 
 **What this accomplishes:**
+
 - Provides user-friendly command-line interfaces with rich output
 - Ensures proper parameter validation and error handling
 - Delivers excellent developer experience with type hints
@@ -706,17 +720,17 @@ SAFE_STRING_REGEX: Pattern = re.compile(r'^[a-zA-Z0-9\s\-_.]+$')
 
 class UserInput(BaseModel):
     """Validated user input model."""
-    
+
     email: str = Field(..., description="User email address")
     name: str = Field(..., min_length=1, max_length=100, description="User name")
     description: str | None = Field(None, max_length=1000, description="Description")
-    
+
     @validator('email')
     def validate_email(cls, v):
         if not EMAIL_REGEX.match(v):
             raise ValueError('Invalid email format')
         return v.lower()
-    
+
     @validator('name', 'description')
     def validate_safe_string(cls, v):
         if v and not SAFE_STRING_REGEX.match(v):
@@ -725,6 +739,7 @@ class UserInput(BaseModel):
 ```
 
 **What this accomplishes:**
+
 - Prevents injection attacks and malicious input
 - Ensures data integrity and validation
 - Provides clear error messages for invalid input
@@ -779,6 +794,7 @@ def complex_function(
 ```
 
 **What this accomplishes:**
+
 - Provides comprehensive documentation for complex functions
 - Includes usage examples and edge case handling
 - Documents all parameters, return values, and exceptions
